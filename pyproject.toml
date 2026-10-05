@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=40.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "widgetkit-django"
+version = "0.1.0"
+description = "Reusable Django integration layer for widget-based dashboard layout builders"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "KI Team"}]
+dependencies = [
+    "Django>=4.2",
+]
+
+[tool.setuptools]
+packages = ["widgetkit_django"]
+
+[tool.setuptools.package-data]
+widgetkit_django = [
+    "templates/widgetkit_django/*.html",
+    "static/widgetkit_django/css/*.css",
+    "static/widgetkit_django/js/*.js",
+]

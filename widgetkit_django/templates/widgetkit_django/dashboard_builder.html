@@ -1,0 +1,62 @@
+{% extends widgetkit_base_template %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'widgetkit_django/css/dashboard-builder.css' %}?v=20261005b">
+
+  <h1>{{ page_title }}</h1>
+  <div class="db-builder-meta">
+    <p class="muted">Area: <span class="chip">{{ area_key }}</span></p>
+    <p class="muted">Subpage: <span class="chip">{{ subpage_key }}</span></p>
+    {% for subpage in subpage_tabs %}
+      {% if subpage.key == subpage_key %}
+        <p class="muted">Target URL: <span class="mono">{{ subpage.path }}</span></p>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <p class="muted">{{ page_subtitle }}</p>
+
+  <nav class="db-area-tabs" aria-label="Builder areas">
+    {% for tab in area_tabs %}
+      <a class="db-area-tab{% if tab.key == area_key %} is-active{% endif %}" href="{% url builder_url_name %}?area={{ tab.key }}">{{ tab.label }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="db-toolbar">
+    <div class="db-toolbar-select">
+      <form method="get" action="{% url builder_url_name %}" style="display:flex; align-items:center; gap:8px; margin:0;">
+        <label for="area-switch" class="muted">Subpage</label>
+        <input type="hidden" name="area" value="{{ area_key }}">
+        <select id="area-switch" name="subpage" onchange="this.form.submit()">
+          {% for subpage in subpage_tabs %}
+            <option value="{{ subpage.key }}" {% if subpage.key == subpage_key %}selected{% endif %}>
+              {{ subpage.label }} · {{ subpage.path }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>    </div>
+    <div class="db-toggle-row">
+      <form id="save-order-form" method="post" action="{% url builder_url_name %}" data-save-url="{% url builder_url_name %}" style="margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save-order">
+        <input type="hidden" name="area" value="{{ area_key }}">
+        <input type="hidden" name="subpage" value="{{ subpage_key }}">
+        <input type="hidden" name="widget_order" id="widget-order" value="[]">
+        <input type="hidden" name="widget_sizes" id="widget-sizes" value="{}">
+        <button type="submit">Save order</button>
+      </form>
+      <form method="post" action="{% url builder_url_name %}" style="margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reset">
+        <input type="hidden" name="area" value="{{ area_key }}">
+        <input type="hidden" name="subpage" value="{{ subpage_key }}">
+        <button type="submit">Reset layout</button>
+      </form>
+    </div>
+  </div>
+
+  {% include "widgetkit_django/dashboard_builder_shell.html" %}
+
+  {{ dashboard_builder_config|json_script:"dashboard-builder-config" }}
+  <script src="{% static 'widgetkit_django/js/dashboard-builder.js' %}?v=20261005c"></script>
+{% endblock %}
