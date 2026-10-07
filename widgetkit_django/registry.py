@@ -4,6 +4,21 @@ from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
 
+class WidgetMetadata(Protocol):
+    """Minimum typed metadata required by the generic builder and catalog."""
+
+    widget_id: str
+    area: str
+    category: str
+    label: str
+    description: str
+    default_size: str
+    default_w: int
+    min_w: int
+    default_h: int
+    resizable: bool
+
+
 class WidgetRegistry(Protocol):
     def builtin_areas(self) -> list[str]:
         ...
@@ -14,7 +29,7 @@ class WidgetRegistry(Protocol):
     def widget_ids(self) -> list[str]:
         ...
 
-    def widget_by_id(self, widget_id: str) -> Any | None:
+    def widget_by_id(self, widget_id: str) -> WidgetMetadata | None:
         ...
 
     def default_widget_ids_for_area(self, area_key: str, subpage_key: str | None = None) -> list[str]:
@@ -26,7 +41,7 @@ class CallbackWidgetRegistry:
     builtin_areas_fn: Callable[[], list[str]]
     widget_hierarchy_fn: Callable[[], dict[str, Any]]
     widget_ids_fn: Callable[[], list[str]]
-    widget_by_id_fn: Callable[[str], Any | None]
+    widget_by_id_fn: Callable[[str], WidgetMetadata | None]
     default_widget_ids_for_area_fn: Callable[[str, str | None], list[str]]
 
     def builtin_areas(self) -> list[str]:
@@ -38,7 +53,7 @@ class CallbackWidgetRegistry:
     def widget_ids(self) -> list[str]:
         return list(self.widget_ids_fn())
 
-    def widget_by_id(self, widget_id: str) -> Any | None:
+    def widget_by_id(self, widget_id: str) -> WidgetMetadata | None:
         return self.widget_by_id_fn(widget_id)
 
     def default_widget_ids_for_area(self, area_key: str, subpage_key: str | None = None) -> list[str]:

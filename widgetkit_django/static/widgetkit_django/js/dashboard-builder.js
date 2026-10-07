@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         widths[select.dataset.widgetId] = Number(select.value || 6);
       });
       grid.querySelectorAll('.db-widget-card[data-resizable="false"]').forEach((card) => {
-        widths[card.dataset.widgetId] = Number(card.style.getPropertyValue('--w') || 6);
+        widths[card.dataset.widgetId] = Number(card.style.getPropertyValue('--widgetkit-width') || 6);
       });
       return widths;
     }
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const widthSelect = card.querySelector('.db-width-select');
       if (widthSelect) {
         widthSelect.addEventListener('change', (event) => {
-          card.style.setProperty('--w', Number(event.target.value || widthSelect.value || 6));
+          card.style.setProperty('--widgetkit-width', Number(event.target.value || widthSelect.value || 6));
           submitSaveOrder();
         });
       }

@@ -9,8 +9,8 @@
               <strong>{{ spec.label }}</strong><br>
               <span class="muted" style="font-size:0.76rem;">{{ spec.area }}/{{ spec.category }}</span>
             </div>
-            <form method="post" action="{% url builder_url_name %}" class="db-widget-action-form" style="margin:0;"
-                  hx-post="{% url builder_url_name %}"
+            <form method="post" action="{{ builder_action_url }}" class="db-widget-action-form" style="margin:0;"
+                  hx-post="{{ builder_action_url }}"
                   hx-target="#dashboard-builder-shell"
                   hx-swap="outerHTML">
               {% csrf_token %}
@@ -30,15 +30,15 @@
 
   <section class="db-panel">
     <h3>Grid layout</h3>
-    <div id="layout-grid" class="db-layout-grid" data-area="{{ area_key }}">
+    <div id="layout-grid" class="db-layout-grid widgetkit-grid--12" data-area="{{ area_key }}">
       {% if selected_widgets %}
         {% for item in selected_widgets %}
           {% with spec=item.spec width=item.width min_width=item.min_width resizable=item.resizable %}
-            <article class="db-widget-card" draggable="true" data-widget-id="{{ spec.widget_id }}" data-min-width="{{ min_width }}" data-resizable="{% if resizable %}true{% else %}false{% endif %}" style="--w: {{ width }}; --h: {{ spec.default_h }};">
+            <article class="db-widget-card widgetkit-grid__item" draggable="true" data-widget-id="{{ spec.widget_id }}" data-min-width="{{ min_width }}" data-resizable="{% if resizable %}true{% else %}false{% endif %}" style="--widgetkit-width: {{ width }}; --h: {{ spec.default_h }};">
               <div class="db-widget-header">
                 <span class="db-widget-title">{{ spec.label }}</span>
-                <form method="post" action="{% url builder_url_name %}" class="db-widget-action-form" style="margin:0;"
-                      hx-post="{% url builder_url_name %}"
+                <form method="post" action="{{ builder_action_url }}" class="db-widget-action-form" style="margin:0;"
+                      hx-post="{{ builder_action_url }}"
                       hx-target="#dashboard-builder-shell"
                       hx-swap="outerHTML">
                   {% csrf_token %}

@@ -14,8 +14,8 @@ dependencies = [
     "Django>=4.2",
 ]
 
-[tool.setuptools]
-packages = ["widgetkit_django"]
+[tool.setuptools.packages.find]
+include = ["widgetkit_django*"]
 
 [tool.setuptools.package-data]
 widgetkit_django = [

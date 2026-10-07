@@ -1,0 +1,40 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'widgetkit_django/css/widget-catalog.css' %}?v=20261007a">
+<nav class="wk-catalog-tabs" aria-label="Widget catalog areas">
+  {% for tab in area_tabs %}
+    <a class="wk-catalog-tab{% if area_filter == tab.key %} is-active{% endif %}" href="{{ tab.url }}">
+      {{ tab.label }} <span class="wk-catalog-count">{{ tab.count }}</span>
+    </a>
+  {% endfor %}
+</nav>
+<div class="wk-catalog-shell">
+  <aside class="wk-catalog-panel">
+    <h3>Widget metadata</h3>
+    <div class="wk-catalog-list">
+      {% for spec in widget_catalog %}
+        <button type="button" class="wk-catalog-item{% if forloop.first %} is-active{% endif %}" data-widget-id="{{ spec.widget_id }}">
+          <div class="wk-catalog-head">
+            <strong>{{ spec.label }}</strong>
+            <span class="wk-catalog-area">{{ spec.area }}</span>
+          </div>
+          <div class="wk-catalog-meta">
+            <code class="wk-catalog-id">{{ spec.widget_id }}</code>
+            <span class="wk-catalog-size">{{ spec.default_w }} × {{ spec.default_h }}</span>
+          </div>
+          <div class="wk-catalog-category">{{ spec.category }}</div>
+          <div class="wk-catalog-copy">{{ spec.description }}</div>
+        </button>
+      {% empty %}
+        <p class="wk-catalog-muted">No registered widgets in this area.</p>
+      {% endfor %}
+    </div>
+  </aside>
+  <section class="wk-catalog-panel">
+    <h3>Widget preview</h3>
+    <p class="wk-catalog-hint">Sample data only; markup is sanitized and all actions are disabled.</p>
+    <div id="widget-preview" class="wk-catalog-preview" aria-live="polite"></div>
+    <noscript>Enable JavaScript to select widgets and inspect their read-only sample HTML.</noscript>
+  </section>
+</div>
+{{ widget_preview_payload|json_script:"widget-preview-payload" }}
+<script src="{% static 'widgetkit_django/js/widget-catalog.js' %}?v=20261007c"></script>

@@ -1,87 +1,86 @@
-# widgetkit-django host integration
+# Host integration
 
-This guide shows what a host Django application must provide to use `widgetkit_django`.
+`widgetkit_django` owns reusable builder/catalog mechanics. The host owns
+routes, navigation, persistence models, authorization, domain/tenant selection,
+sample data, and widget renderers.
 
-## 1. Install the app
+## Install and discover package resources
 
-Add the package to `INSTALLED_APPS` so Django discovers templates, static files, and template tags.
+Install `widgetkit-django` and add `widgetkit_django` to `INSTALLED_APPS`. This
+registers its templates, static assets, and template tags. Wheel builds include
+the `templatetags` package as well as templates and static files.
 
-Current in-repo app name:
+## Registry and layout store
 
-- `widgetkit_django`
+Implement `WidgetRegistry` and `LayoutStore`, or adapt callbacks with
+`CallbackWidgetRegistry`. Registry entries structurally implement
+`WidgetMetadata` (stable `widget_id`, area/category, label/description,
+default dimensions, minimum width, and resize capability).
 
-## 2. Provide a layout store
+Layout stores implement `load_layout` and `load_shared_layout`, returning a
+`LayoutState` with both `exists` and placements. The distinction is observable:
 
-Implement `widgetkit_django.layout_store.LayoutStore`.
+- Missing layout: use shared layout, then host defaults.
+- Existing layout with placements: use those placements.
+- Existing layout with zero placements: intentionally render an empty layout.
+- `clear_placements`: remove the saved override so a future load resolves
+  shared/default state again.
+- `replace_placements(..., placements=[])`: explicitly save an empty layout.
 
-Required methods:
+`LayoutPlacement.config_json`, width, height, and grid coordinates are part of
+the contract. The package preserves config and dimensions for surviving widget
+IDs on order updates. The shared `layout_positions_for_widgets` helper provides
+the package's twelve-column row-major placement algorithm.
 
-- `load_placements(...)`
-- `load_shared_placements(...)`
-- `replace_placements(...)`
-- `clear_placements(...)`
+## Builder view
 
-The host decides:
+Build `BuilderViewConfig` with:
 
-- which database models back placements
-- how dashboards are keyed
-- whether layouts are user-owned, shared, tenant-owned, or domain-owned
+- registry and store adapters
+- active-scope getter
+- selection loader/syncer
+- `builder_url(area, subpage)` callback that returns a URL resolved by the host
+- `page_targets_for_area(area)` callback returning `PageTarget` values
+- optional `invalidate_layout_cache(area, subpage, active_scope)` callback
+- optional host base template and presentation strings
 
-## 3. Provide a widget registry
+Wire `dashboard_builder_view(request, config=...)` from a thin host view. The
+controller accepts GET/POST only. Invalid area/page targets, actions, JSON
+payloads, and widget IDs return HTTP 400; unsupported HTTP methods return 405.
+The action contract is `add`, `remove`, `save-order`, and `reset`. Reset removes
+the saved override; an empty `save-order` deliberately persists an empty
+layout. A host cache invalidator receives only the changed area, subpage, and
+active scope; the package never clears a global cache.
 
-Use `widgetkit_django.registry.CallbackWidgetRegistry` or your own implementation of `WidgetRegistry`.
+Authorization remains the host's responsibility: protect its URL/view with the
+host's established authentication and permission policy.
 
-The registry must answer:
+## Catalog and preview
 
-- which builder areas exist
-- which widgets belong to which categories
-- how to resolve a widget by ID
-- which defaults seed each area/subpage
+The reusable catalog template expects area tabs with host-generated `url`,
+`label`, `key`, and global `count`, metadata implementing `WidgetMetadata`, and
+`PreviewResult.to_payload()` values. Hosts must create bounded sample context
+and use their real widget fragment renderers; the package does not call live
+data adapters. `readonly_preview_html` sanitizes rendered markup before it is
+placed in the catalog. Provide `scope_label` (for example, “Domain” or
+“Workspace”) with the preview result rather than relying on package-specific
+terminology.
 
-## 4. Provide selection wiring
+## Template URL tag
 
-The generic builder view does not decide session semantics.
+The package tag is host-neutral:
 
-The host supplies:
+```django
+{% load widgetkit_django %}
+{% widgetkit_builder_url builder_base_url 'reports' 'overview' %}
+```
 
-- a selection loader
-- a selection syncer
-- active-domain lookup
+The host resolves `builder_base_url`; the package only appends encoded area and
+subpage query parameters. Host-specific convenience tags may wrap this helper.
 
-This keeps package logic reusable across:
+## Layout grid CSS
 
-- single-tenant apps
-- multi-tenant apps
-- domain-scoped workspaces
-
-## 5. Mount the builder view
-
-Use `widgetkit_django.views.dashboard_builder_view(...)` from a thin host adapter view and pass a `BuilderViewConfig`.
-
-Typical host choices:
-
-- route name
-- page title
-- page subtitle
-- base template name
-
-## 6. Optional host chrome
-
-If the host wants the builder inside its own site shell, pass:
-
-- `base_template_name="base.html"`
-
-If not, the package falls back to:
-
-- `widgetkit_django/base.html`
-
-## 7. Reuse metadata helpers
-
-The package can also drive navigation and builder links:
-
-- `layout_builder_url(...)`
-- `layout_targets_for_area(...)`
-- `layout_target(...)`
-- `nav_areas_config()`
-
-This avoids duplicating page-target metadata between navigation and builder tabs.
+Load `widgetkit_django/css/layout-grid.css` and put `widgetkit-grid--12` on the
+grid with `widgetkit-grid__item` on each item. Set `--widgetkit-width` to the
+persisted width. The stylesheet uses standalone fallback colors and does not
+require a host theme or framework.

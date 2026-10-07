@@ -285,3 +285,23 @@ The extraction was kept behavior-safe through targeted checks:
 - targeted builder/layout target tests
 - targeted builder seeding/persistence regressions
 - focused tests for the new registry and placement-loading boundary
+
+## Standalone boundary follow-up
+
+The standalone package now owns typed widget metadata, page-target and preview
+contracts, the read-only fragment sanitizer, catalog UI assets, and the shared
+twelve-column layout algorithm/styles. Package routing helpers only append
+query values to URLs resolved by a host. ki-knowledge owns its navigation/page
+definitions, route reversals, domain label/selection, sample data, renderers,
+and Django model adapter.
+
+`LayoutState.exists` differentiates missing layouts from explicitly empty
+layouts. Reset deletes a saved override; saving an empty order persists an
+empty layout. Reordering retains placement width, height, and `config_json`,
+and the concrete host replacement is transactional. Builder POST parsing
+returns explicit 400 responses for invalid actions/payloads. The package no
+longer clears a global cache; hosts may inject a scope-specific invalidator.
+
+Setuptools package discovery includes the template-tag subpackage and
+package-data includes the templates and static assets. See
+`docs/host-integration.md` for the current adapter contract.
