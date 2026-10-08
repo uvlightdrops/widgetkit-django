@@ -1,0 +1,41 @@
+<div class="widgetkit-table-toolbar" aria-label="Tabellenfilter">
+  {% if presets %}
+  <nav class="widgetkit-table-toolbar__presets" aria-label="Kurzfilter">
+    {% for preset in presets %}
+      <a class="widgetkit-table-toolbar__preset{% if preset.active %} widgetkit-table-toolbar__preset--active{% endif %}" href="{{ preset.href }}"{% if preset.active %} aria-current="page"{% endif %}>{{ preset.label }}{% if preset.count is not None %} <strong>{{ preset.count }}</strong>{% endif %}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+  {% for facet in facets %}
+  <div class="widgetkit-table-toolbar__facet" aria-label="{{ facet.label }}">
+    <span class="widgetkit-table-toolbar__facet-label">{{ facet.label }}</span>
+    <div class="widgetkit-table-toolbar__chips">
+      {% for option in facet.options %}
+        <a class="widgetkit-table-toolbar__chip{% if option.active %} widgetkit-table-toolbar__chip--active{% endif %}" href="{{ option.href }}"{% if option.active %} aria-current="page"{% endif %}>{{ option.label }} <strong>{{ option.count }}</strong></a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <form class="widgetkit-table-toolbar__search" method="get" action="{{ base_url }}">
+    {% for name, value in hidden_items %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    {% for text in text_filters %}
+      <label>{{ text.label }}
+        <input type="search" name="{{ text.key }}" value="{{ text.value }}" maxlength="{{ text.max_length }}" placeholder="{{ text.placeholder }}">
+      </label>
+    {% endfor %}
+    <label>Sortierung
+      <select name="sort">
+        {% for option in sort_options %}<option value="{{ option.key }}"{% if option.active %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+      </select>
+    </label>
+    {% for choice in choice_params %}
+      <label>{{ choice.label }}
+        <select name="{{ choice.key }}">
+          {% for option in choice.options %}<option value="{{ option.value }}"{% if option.active %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        </select>
+      </label>
+    {% endfor %}
+    <button type="submit">Anwenden</button>
+    <a class="widgetkit-table-toolbar__reset" href="{{ reset_url }}">Zurücksetzen</a>
+  </form>
+</div>

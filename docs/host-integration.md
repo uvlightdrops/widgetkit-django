@@ -55,6 +55,22 @@ active scope; the package never clears a global cache.
 Authorization remains the host's responsibility: protect its URL/view with the
 host's established authentication and permission policy.
 
+
+## Table query and toolbar
+
+`widgetkit_django.table` provides host-neutral contracts for table URL state:
+`ChoiceFilter`, `TextFilter`, `SortOption`, `TableSpec`, `TablePreset`, and
+`TableQuery`. The package validates query parameters against explicit allowlists,
+emits canonical URLs with non-default parameters, builds facet/preset/sort links,
+and slices pages with `paginate`.
+
+The reusable `widgetkit_django/table_toolbar.html` template and
+`widgetkit_django/css/data-table.css` render filter chips, shortcut presets, text
+search, display choices, and sort controls with standalone fallback colors. Hosts
+still own rows, counts, authorization, mutations, row rendering, and action URLs.
+The toolbar must receive host-computed counts and links from the table helpers;
+package code never reads host data or performs actions.
+
 ## Catalog and preview
 
 The reusable catalog template expects area tabs with host-generated `url`,

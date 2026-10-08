@@ -222,3 +222,41 @@ def test_reset_returns_effective_shared_layout(placements, expected):
     store = SharedStore(LayoutState(exists=True))
     assert resolve(store, "reset") == expected
     assert store.layout.exists is False
+
+from widgetkit_django.table import (
+    ChoiceFilter, SortOption, TablePreset, TableSpec, TextFilter,
+    facet_options, paginate, parse_table_query, preset_links, sort_links,
+)
+
+
+def _table_spec():
+    return TableSpec(
+        filters=(
+            ChoiceFilter("kind", "Typ", (("pdf", "PDF"), ("markdown", "Markdown"))),
+            TextFilter("q", "Suche", max_length=5),
+        ),
+        sorts=(SortOption("updated", "Updated"), SortOption("title", "Title")),
+        default_sort="updated",
+        choice_params=(ChoiceFilter("display", "Darstellung", (("table", "Tabelle"), ("cards", "Karten"))),),
+    )
+
+
+def test_table_query_validates_allowlists_and_builds_canonical_urls():
+    query = parse_table_query(_table_spec(), {"kind": "bad", "q": "  abcdef ", "sort": "no", "display": "cards", "page": "3"})
+    assert query.values == {"kind": "", "q": "abcde", "sort": "updated", "display": "cards"}
+    assert query.page == 3
+    assert query.url("/sources/") == "/sources/?q=abcde&display=cards&page=3"
+    assert query.url("/sources/", kind="pdf", page=1) == "/sources/?kind=pdf&q=abcde&display=cards"
+    assert query.hidden_items() == (("q", "abcde"), ("display", "cards"))
+
+
+def test_table_facets_presets_sorts_and_pagination():
+    spec = _table_spec()
+    query = parse_table_query(spec, {"kind": "pdf", "sort": "title"})
+    facets = facet_options(spec, query, "kind", {"pdf": 2, "markdown": 1}, "/sources/")
+    assert [(item.value, item.count, item.active) for item in facets] == [("", 3, False), ("pdf", 2, True), ("markdown", 1, False)]
+    presets = preset_links(spec, query, [TablePreset("all", "Alle", {}), TablePreset("pdf", "PDFs", {"kind": "pdf"})], "/sources/")
+    assert [item.active for item in presets] == [False, True]
+    assert sort_links(spec, query, "/sources/")[1].active is True
+    page = paginate(range(5), query, 2, "/sources/")
+    assert page.items == (0, 1) and page.total == 5 and page.next_href.endswith("sort=title&page=2")
