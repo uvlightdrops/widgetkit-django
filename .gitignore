@@ -57,3 +57,8 @@ Thumbs.db
 
 tmp_*
 ki.yaml
+
+# Per-host configuration
+config/stages/.active_stage
+config/profiles/.active_profile
+config/runtime/
