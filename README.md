@@ -49,6 +49,69 @@ widgetkit_django/
 
 ## Architecture
 
+### Runtime configuration editor
+
+With `ki-core` installed in the host, `widgetkit_django.runtime_settings` provides
+a reusable authenticated settings page:
+
+```python
+from pathlib import Path
+from ki_core.runtime_settings import RuntimeSettings
+from widgetkit_django.runtime_settings import runtime_settings_view
+
+def settings_view(request):
+    return runtime_settings_view(
+        request,
+        service=RuntimeSettings(
+            Path("/srv/my-project"),
+            restart_paths=("apps.my_app.worker",),
+            excluded_paths=("apps.my_app.database_owned",),
+        ),
+        base_template="base.html",
+        title="Konfiguration",
+        context={"ownership_links": [{"url": "/admin/", "label": "DB-Verwaltung"}]},
+    )
+```
+
+Register `widgetkit_django` in `INSTALLED_APPS` and enable the standard CSRF
+middleware. The adapter independently requires an authenticated **active
+superuser**, protects POSTs with CSRF, and marks responses never-cache. Missing
+host base templates fall back to `widgetkit_django/base.html`. The template is
+included in package data. Existing widgetkit users do not need ki-core unless
+they use this optional adapter.
+
+Rows use typed controls (enum/boolean select, string/number input, JSON for
+null/unions/arrays/maps), explicit change/removal checkboxes, and a
+hidden optimistic revision. The form contract is `revision`, repeated `change`
+and `remove` paths, plus `value:<path>` controls. JSON POSTs may instead send
+`{revision, changes, remove}`, with the same CSRF policy. Stale revisions return
+409 and invalid edits return 400, with value-free errors and no submitted-value
+echo. Row wrappers expose `data-config-path`; controls use the path as their
+accessible label.
+
+Values are limited to schema-discovered safe fields. Credentials are shown only
+as configured/not-configured. A separate write-only section provides password
+forms without prefilled values. Its POST contract is `action=save_secret`,
+`creds_revision`, `secret_path`, and `secret_value`; deletion uses
+`action=remove_secret` and additionally requires `confirm_remove=yes`.
+These forms use `secret_snapshot()["revision"]`, not the runtime revision.
+Blank password inputs are no-ops; explicit deletion may expose a lower-layer
+secret. Successful form saves redirect to GET, retaining host query parameters
+and only a non-sensitive saved indicator. There are no nested forms or secret
+values in redirects, response HTML or error messages.
+
+Only registered scalar string secrets are supported, respecting host exclusions.
+The active project-local `creds.yaml` (or `config/creds.yaml`) is updated with
+atomic mode-0600 writes. If active credentials are external or symlinked, the UI
+disables the section with an explanation rather than shadowing/migrating them.
+JSON POST remains the nonsecret runtime API; use the core service directly for a
+different framework's write-only credential endpoints.
+Unknown/open/secret-containing structures and host exclusions remain read-only.
+Higher environment/credential layers may shadow an override. Restart labels
+identify startup settings; hosts must reload configuration for dynamic changes
+to affect subsequent operations. No generic effective-configuration JSON dump
+is exposed. Flask and CLI hosts reuse the core service directly without Django.
+
 The package is built around explicit registry, persistence, page-target, and preview contracts.
 
 ### Widget registry contract
@@ -147,6 +210,15 @@ Host override:
 This makes the package usable standalone while still fitting into a host site shell.
 
 ## Static assets
+
+The shared runtime settings view accepts `compact=True` for an alternative
+hierarchical table (`runtime_settings_compact.html`). The default detailed view
+is unchanged. Both use the same service, access checks, revisions and write-only
+credential actions. The host supplies its own URL/menu entry and may pass
+`configuration_url` in `context` for a link back to its detailed view.
+Compact controls and status badges use
+`widgetkit_django/css/runtime-settings-compact.css`; descriptions and full paths
+are available as tooltips. Text labels accompany status colors.
 
 The package expects Django staticfiles to serve:
 

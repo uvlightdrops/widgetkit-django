@@ -1,0 +1,35 @@
+.wk-c2 { font-size: 12px; }
+.wk-c2-heading { display: flex; align-items: baseline; gap: 1rem; }
+.wk-c2-heading h1 { margin: 0 0 .4rem; font-size: 1.3rem; }
+.wk-c2 h2 { margin: 1rem 0 .4rem; font-size: 1rem; }
+.wk-c2-legend, .wk-c2-warning { margin: .35rem 0; font-size: 11px; }
+.wk-c2-links { display: flex; flex-wrap: wrap; gap: .75rem; margin: .4rem 0; }
+.wk-c2-scroll { overflow-x: auto; }
+.wk-c2 .wk-c2-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.wk-c2-table th, .wk-c2-table td { padding: 3px 6px; border-bottom: 1px solid #8884; text-align: left; vertical-align: middle; }
+.wk-c2-table thead th { white-space: nowrap; background: #8882; }
+.wk-c2-table tbody th { font-weight: 400; }
+.wk-c2-table .wk-c2-group th { padding-top: 5px; background: #8881; font-weight: 600; }
+.wk-c2-name { display: inline-block; white-space: nowrap; cursor: help; }
+.wk-c2-value { max-width: 24rem; overflow-wrap: anywhere; }
+.wk-c2-value code { font-size: 11px; }
+.wk-c2-status { white-space: nowrap; }
+.wk-c2-badge { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 10px; font-weight: 600; text-decoration: none; line-height: 1.3; cursor: help; }
+.wk-c2-yes, .wk-c2-live { background: #d9f5e5; color: #155e36; }
+.wk-c2-no, .wk-c2-readonly { background: #e8eaf0; color: #464c5e; }
+.wk-c2-restart { background: #ffe4c2; color: #814900; }
+.wk-c2-shadow { background: #ffe0e4; color: #8c2034; }
+.wk-c2-runtime { background: #dfeaff; color: #204c91; }
+.wk-c2 .wk-c2-editor { display: flex; align-items: center; gap: 5px; margin: 0; padding: 0; }
+.wk-c2 input[type="text"], .wk-c2 input[type="password"], .wk-c2 input[type="number"], .wk-c2 select, .wk-c2 textarea {
+  box-sizing: border-box; width: 15rem; min-width: 0; max-width: 100%; min-height: 24px; height: 24px;
+  padding: 2px 5px; margin: 0; font-size: 12px; line-height: 18px; border: 1px solid #8888; border-radius: 3px;
+}
+.wk-c2 textarea { resize: both; min-height: 24px; font-family: monospace; }
+.wk-c2 select { width: auto; max-width: 15rem; }
+.wk-c2 .wk-c2-number { width: 6rem; }
+.wk-c2 .wk-c2-bool { width: 4.5rem; }
+.wk-c2 input[type="checkbox"] { width: 13px; height: 13px; min-height: 0; margin: 0; flex: 0 0 auto; }
+.wk-c2 button { width: auto; min-height: 24px; padding: 2px 7px; margin: 0; font-size: 12px; }
+.wk-c2-save { position: sticky; bottom: 0; padding: .4rem 0; background: var(--bg, Canvas); }
+.wk-c2-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

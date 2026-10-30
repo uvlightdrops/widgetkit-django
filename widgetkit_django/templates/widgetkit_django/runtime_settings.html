@@ -1,0 +1,93 @@
+{% extends widgetkit_base_template %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>Änderungen werden lokal in <code>config/runtime/runtime.yaml</code> gespeichert.
+  Dynamische Einstellungen gelten beim nächsten Konfigurationsabruf. Mit „Neustart“ markierte Felder
+  benötigen einen Neustart. Umgebungsvariablen und <code>creds.yaml</code> haben weiterhin Vorrang.</p>
+<p>Zugangsdaten werden niemals angezeigt. Separate Passwortformulare schreiben ausschließlich in projektlokale <code>creds.yaml</code>.
+  Nicht sicher typisierte Objekte bleiben schreibgeschützt.</p>
+{% if ownership_links %}<nav aria-label="Weitere Einstellungsbereiche">
+  {% for link in ownership_links %}<a href="{{ link.url }}">{{ link.label }}</a> {% endfor %}
+</nav>{% endif %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if saved %}<p role="status">Konfiguration gespeichert.</p>{% endif %}
+{% for warning in snapshot.warnings %}<p role="status">{{ warning }}</p>{% endfor %}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="revision" value="{{ snapshot.revision }}">
+  {% for row in snapshot.rows %}
+  <fieldset data-config-path="{{ row.path }}">
+    <legend>{{ row.label }}</legend>
+    <code>{{ row.path }}</code>
+    {% if row.description %}<p>{{ row.description }}</p>{% endif %}
+    {% if row.restart_required %}<strong>Neustart erforderlich</strong>{% endif %}
+    {% if row.shadowed %}<p>Überlagert durch {{ row.shadowed_by }}; Laufzeitänderung bleibt nachrangig.</p>{% endif %}
+    {% if row.secret %}
+      <p>Zugangsdaten: {% if row.configured %}konfiguriert{% else %}nicht konfiguriert{% endif %}</p>
+    {% else %}
+      <p>Wirksam: <code>{{ row.effective }}</code></p>
+      {% if row.overridden %}<p>Laufzeitwert: <code>{{ row.override }}</code></p>{% endif %}
+    {% endif %}
+    {% if row.editable %}
+      <label><input type="checkbox" name="change" value="{{ row.path }}"> Neuen Wert übernehmen</label>
+      {% if row.enum_options %}
+      <label>Wert <select name="value:{{ row.path }}" aria-label="{{ row.path }}">
+        {% for option in row.enum_options %}<option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+      </select></label>
+      {% elif row.types.0 == "boolean" and row.types|length == 1 %}
+      <label>Wert <select name="value:{{ row.path }}" aria-label="{{ row.path }}">
+        <option value="true"{% if row.input_value == "true" %} selected{% endif %}>Ja</option>
+        <option value="false"{% if row.input_value == "false" %} selected{% endif %}>Nein</option>
+      </select></label>
+      {% elif row.types.0 == "string" and row.types|length == 1 %}
+      <label>Wert <input type="text" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}"></label>
+      {% elif row.types.0 == "integer" and row.types|length == 1 %}
+      <label>Wert <input type="number" step="1" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}"></label>
+      {% elif row.types.0 == "number" and row.types|length == 1 %}
+      <label>Wert <input type="number" step="any" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}"></label>
+      {% else %}
+      <label>Wert (JSON; Typ {{ row.type }})
+        <textarea name="value:{{ row.path }}" aria-label="{{ row.path }}" rows="3">{{ row.input_value }}</textarea>
+      </label>
+      {% endif %}
+      {% if row.overridden %}<label><input type="checkbox" name="remove" value="{{ row.path }}"> Laufzeit-Override entfernen (auf niedrigere Ebene zurücksetzen)</label>{% endif %}
+    {% else %}<p>{{ row.reason }}</p>{% endif %}
+  </fieldset>
+  {% endfor %}
+  <button type="submit">Ausgewählte Änderungen speichern</button>
+</form>
+<h2>Zugangsdaten (nur schreiben)</h2>
+<p>Jedes Formular speichert separat mit eigener Zugangsdatenrevision.
+  Leere Eingaben ändern nichts. Entfernen löscht nur den Zugangsdaten-Override;
+  Umgebungsvariablen oder niedrigere Konfigurationsebenen können weiterhin einen Wert liefern.
+  Bereits erzeugte Clients benötigen gegebenenfalls einen Neustart.</p>
+{% if secret_error %}<p role="alert">{{ secret_error }}</p>{% endif %}
+{% for row in secret_snapshot.rows %}
+<fieldset data-secret-path="{{ row.path }}">
+  <legend>{{ row.label }}</legend>
+  <p>{% if row.configured %}Konfiguriert{% else %}Nicht konfiguriert{% endif %}</p>
+  {% if row.restart_required %}<strong>Neustart erforderlich</strong>{% endif %}
+  {% if row.editable %}
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_secret">
+    <input type="hidden" name="creds_revision" value="{{ secret_snapshot.revision }}">
+    <input type="hidden" name="secret_path" value="{{ row.path }}">
+    <label>Neuer Wert <input type="password" name="secret_value" aria-label="{{ row.path }}" autocomplete="new-password"></label>
+    <button type="submit">Zugangsdaten speichern</button>
+  </form>
+  {% if row.overridden %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="remove_secret">
+    <input type="hidden" name="creds_revision" value="{{ secret_snapshot.revision }}">
+    <input type="hidden" name="secret_path" value="{{ row.path }}">
+    <label><input type="checkbox" name="confirm_remove" value="yes" required> Zugangsdaten-Override ausdrücklich löschen</label>
+    <button type="submit">Override entfernen</button>
+  </form>
+  {% endif %}
+  {% else %}<p>{{ row.reason }}</p>{% endif %}
+</fieldset>
+{% endfor %}
+{% endblock %}

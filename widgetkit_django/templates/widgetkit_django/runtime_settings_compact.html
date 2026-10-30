@@ -1,0 +1,115 @@
+{% extends widgetkit_base_template %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'widgetkit_django/css/runtime-settings-compact.css' %}">
+<section class="wk-c2">
+  <header class="wk-c2-heading">
+    <h1>{{ title }}</h1>
+    {% if configuration_url %}<a href="{{ configuration_url }}">Ausführliche Ansicht</a>{% endif %}
+  </header>
+  <p class="wk-c2-legend">
+    <abbr title="Wirksam: der aufgelöste Konfigurationswert, nicht der Zustand bereits laufender Aufgaben">W</abbr> wirksam ·
+    <abbr title="Runtime-Override vorhanden">R</abbr> Runtime ·
+    <abbr title="Ein höherer Layer überlagert den Runtime-Wert">Ü</abbr> überlagert ·
+    <abbr title="Neustart für die Aktivierung erforderlich">N</abbr> Neustart ·
+    <abbr title="Wert beim nächsten Konfigurationsabruf verfügbar; laufende Aufgaben behalten ihre Konfiguration">L</abbr> live ·
+    <abbr title="Feld wird durch einen anderen Eigentümer oder nicht hinreichend definiertes Schema verwaltet">RO</abbr> nur lesen.
+    <span title="Änderungen in config/runtime/runtime.yaml; Environment und creds.yaml haben Vorrang. Zugangsdaten werden separat nur schreibend in creds.yaml gespeichert.">ⓘ Vererbung</span>
+  </p>
+  {% if ownership_links %}<nav class="wk-c2-links" aria-label="Weitere Einstellungsbereiche">
+    {% for link in ownership_links %}<a href="{{ link.url }}">{{ link.label }}</a>{% endfor %}
+  </nav>{% endif %}
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if saved %}<p role="status">Konfiguration gespeichert.</p>{% endif %}
+  {% for warning in snapshot.warnings %}<p class="wk-c2-warning" role="status">{{ warning }}</p>{% endfor %}
+  <form method="post" id="wk-c2-runtime">
+    {% csrf_token %}
+    <input type="hidden" name="revision" value="{{ snapshot.revision }}">
+    <div class="wk-c2-scroll">
+      <table class="wk-c2-table">
+        <caption class="wk-c2-sr">Konfiguration: Hierarchie, wirksamer Wert, Status und Runtime-Änderung</caption>
+        <thead><tr><th scope="col">Feld</th><th scope="col">Wirksam</th><th scope="col">Status</th><th scope="col" title="Nur angehakte Änderungen speichern">Ändern</th><th scope="col" title="Runtime-Override entfernen: untere Ebene gilt wieder">−R</th></tr></thead>
+        <tbody>
+        {% for row in compact_rows %}
+          {% if row.group %}
+          <tr class="wk-c2-group"><th scope="row" colspan="5"><span style="padding-left:{{ row.indent }}px" title="{{ row.path }}">{{ row.name }}</span></th></tr>
+          {% else %}
+          <tr data-config-path="{{ row.path }}">
+            <th scope="row"><span class="wk-c2-name" style="padding-left:{{ row.indent }}px" title="{{ row.path }}{% if row.description %} — {{ row.description }}{% endif %}">{{ row.name }}</span></th>
+            <td class="wk-c2-value">
+              {% if row.secret %}<span class="wk-c2-badge {% if row.configured %}wk-c2-yes{% else %}wk-c2-no{% endif %}" title="Zugangsdaten werden nie angezeigt">{% if row.configured %}gesetzt{% else %}leer{% endif %}</span>
+              {% elif row.types.0 == "boolean" and row.types|length == 1 %}<span class="wk-c2-badge {% if row.effective %}wk-c2-yes{% else %}wk-c2-no{% endif %}" title="Wirksamer Bool-Wert: {{ row.effective }}">{% if row.effective %}Ja{% else %}Nein{% endif %}</span>
+              {% else %}<code title="{{ row.effective }}">{{ row.effective|truncatechars:70 }}</code>{% endif %}
+            </td>
+            <td class="wk-c2-status">
+              {% if row.restart_required %}<abbr class="wk-c2-badge wk-c2-restart" title="Neustart erforderlich; Speichern allein aktiviert das Feld nicht">N</abbr>{% else %}<abbr class="wk-c2-badge wk-c2-live" title="Beim nächsten Konfigurationsabruf verfügbar, nicht rückwirkend für laufende Aufgaben">L</abbr>{% endif %}
+              {% if row.shadowed %}<abbr class="wk-c2-badge wk-c2-shadow" title="Überlagert durch {{ row.shadowed_by }}; Runtime bleibt nachrangig">Ü</abbr>{% elif not row.secret %}<abbr class="wk-c2-badge wk-c2-live" title="W zeigt den aktuell aufgelösten Wert; keine Überlagerung des Runtime-Werts festgestellt">W</abbr>{% endif %}
+              {% if row.overridden %}<abbr class="wk-c2-badge wk-c2-runtime" title="Runtime-Override vorhanden{% if not row.secret %}: {{ row.override }}{% endif %}">R</abbr>{% endif %}
+              {% if not row.editable %}<abbr class="wk-c2-badge wk-c2-readonly" title="{{ row.reason }}">RO</abbr>{% endif %}
+            </td>
+            <td>
+              {% if row.editable %}
+              <div class="wk-c2-editor">
+                <input type="checkbox" name="change" value="{{ row.path }}" aria-label="Änderung übernehmen: {{ row.path }}" title="Diesen neuen Wert übernehmen">
+                {% if row.enum_options %}
+                <select name="value:{{ row.path }}" aria-label="{{ row.path }}">{% for option in row.enum_options %}<option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select>
+                {% elif row.types.0 == "boolean" and row.types|length == 1 %}
+                <select name="value:{{ row.path }}" aria-label="{{ row.path }}" class="wk-c2-bool"><option value="true"{% if row.input_value == "true" %} selected{% endif %}>Ja</option><option value="false"{% if row.input_value == "false" %} selected{% endif %}>Nein</option></select>
+                {% elif row.types.0 == "string" and row.types|length == 1 %}
+                <input type="text" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}" size="22">
+                {% elif row.types.0 == "integer" and row.types|length == 1 %}
+                <input type="number" step="1" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}" class="wk-c2-number">
+                {% elif row.types.0 == "number" and row.types|length == 1 %}
+                <input type="number" step="any" name="value:{{ row.path }}" aria-label="{{ row.path }}" value="{{ row.input_value }}" class="wk-c2-number">
+                {% else %}
+                <textarea name="value:{{ row.path }}" aria-label="{{ row.path }}" title="JSON; Typ {{ row.type }}" rows="1" cols="24">{{ row.input_value }}</textarea>
+                {% endif %}
+              </div>
+              {% else %}<span class="wk-c2-reason" title="{{ row.reason }}">—</span>{% endif %}
+            </td>
+            <td>{% if row.editable and row.overridden %}<input type="checkbox" name="remove" value="{{ row.path }}" aria-label="Runtime-Override entfernen: {{ row.path }}" title="Nur den Runtime-Override entfernen">{% endif %}</td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="wk-c2-save"><button type="submit">Ausgewählte Änderungen speichern</button></div>
+  </form>
+  <h2>Zugangsdaten</h2>
+  <p class="wk-c2-legend">Nur schreiben; je Feld separat speichern. Leer = keine Änderung. <span title="Entfernen löscht nur den Credentials-Override; Environment oder untere Ebenen können weiter einen Wert liefern.">ⓘ Entfernen</span></p>
+  {% if secret_error %}<p role="alert">{{ secret_error }}</p>{% endif %}
+  <div class="wk-c2-scroll">
+    <table class="wk-c2-table">
+      <caption class="wk-c2-sr">Zugangsdaten: nur schreiben, niemals im Klartext anzeigen</caption>
+      <thead><tr><th scope="col">Feld</th><th scope="col">Status</th><th scope="col">Neuer Wert</th><th scope="col">Entfernen</th></tr></thead>
+      <tbody>
+      {% for row in compact_secret_rows %}
+        {% if row.group %}<tr class="wk-c2-group"><th scope="row" colspan="4"><span style="padding-left:{{ row.indent }}px" title="{{ row.path }}">{{ row.name }}</span></th></tr>
+        {% else %}
+        <tr data-secret-path="{{ row.path }}">
+          <th scope="row"><span class="wk-c2-name" style="padding-left:{{ row.indent }}px" title="{{ row.path }}">{{ row.name }}</span></th>
+          <td class="wk-c2-status"><span class="wk-c2-badge {% if row.configured %}wk-c2-yes{% else %}wk-c2-no{% endif %}" title="Zugangsdaten {% if row.configured %}konfiguriert{% else %}nicht konfiguriert{% endif %}">{% if row.configured %}gesetzt{% else %}leer{% endif %}</span>{% if row.restart_required %} <abbr class="wk-c2-badge wk-c2-restart" title="Neustart erforderlich">N</abbr>{% endif %}</td>
+          <td>{% if row.editable %}
+            <form method="post" autocomplete="off" class="wk-c2-editor">
+              {% csrf_token %}<input type="hidden" name="action" value="save_secret"><input type="hidden" name="creds_revision" value="{{ secret_snapshot.revision }}"><input type="hidden" name="secret_path" value="{{ row.path }}">
+              <input type="password" name="secret_value" aria-label="{{ row.path }}" autocomplete="new-password" size="18">
+              <button type="submit" title="Zugangsdaten separat speichern">Speichern</button>
+            </form>
+          {% else %}<abbr title="{{ row.reason }}">RO</abbr>{% endif %}</td>
+          <td>{% if row.editable and row.overridden %}
+            <form method="post" class="wk-c2-editor">
+              {% csrf_token %}<input type="hidden" name="action" value="remove_secret"><input type="hidden" name="creds_revision" value="{{ secret_snapshot.revision }}"><input type="hidden" name="secret_path" value="{{ row.path }}">
+              <input type="checkbox" name="confirm_remove" value="yes" required aria-label="Löschen bestätigen: {{ row.path }}" title="Entfernen ausdrücklich bestätigen">
+              <button type="submit" title="Credentials-Override entfernen">−</button>
+            </form>
+          {% endif %}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
